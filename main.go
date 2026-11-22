@@ -9,6 +9,7 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -21,16 +22,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Le manifeste d'exemple est embarqué : « agents --init » le pose dans
+// ~/.agents/ sans avoir besoin du dépôt.
+//
+//go:embed agents.yaml
+var exemple []byte
+
 // ---------------------------------------------------------------- manifeste
 
 type Entry struct {
-	ID      string `yaml:"id" json:"id"`
-	Kind    string `yaml:"kind" json:"kind"` // skill | mcp | plugin | config
-	Name    string `yaml:"name" json:"name"`
-	Source  string `yaml:"source,omitempty" json:"source,omitempty"`
-	Detect  string `yaml:"detect,omitempty" json:"detect,omitempty"` // chemin, ~ accepté
-	Enabled bool   `yaml:"enabled" json:"enabled"`
-	Note    string `yaml:"note,omitempty" json:"note,omitempty"`
+	ID      string            `yaml:"id" json:"id"`
+	Kind    string            `yaml:"kind" json:"kind"` // skill | mcp | plugin | config
+	Name    string            `yaml:"name" json:"name"`
+	Source  string            `yaml:"source,omitempty" json:"source,omitempty"`
+	Agents  []string          `yaml:"agents,omitempty" json:"agents,omitempty"`
+	Targets map[string]string `yaml:"targets,omitempty" json:"targets,omitempty"`
+	Detect  string            `yaml:"detect,omitempty" json:"detect,omitempty"` // ancien format
+	Enabled bool              `yaml:"enabled" json:"enabled"`
+	Note    string            `yaml:"note,omitempty" json:"note,omitempty"`
 }
 
 type Manifest struct {
@@ -48,12 +57,79 @@ func expand(p string) string {
 	return p
 }
 
+// InstalledFor dit si l'entrée est présente pour un agent donné.
+func (e Entry) InstalledFor(agent string) bool {
+	p, ok := e.Targets[agent]
+	if !ok || p == "" {
+		return false
+	}
+	_, err := os.Stat(expand(p))
+	return err == nil
+}
+
+// Installed est vrai dès qu'un des agents déclarés a l'entrée sur le disque.
 func (e Entry) Installed() bool {
+	if len(e.Targets) > 0 {
+		for a := range e.Targets {
+			if e.InstalledFor(a) {
+				return true
+			}
+		}
+		return false
+	}
 	if e.Detect == "" {
 		return false
 	}
 	_, err := os.Stat(expand(e.Detect))
 	return err == nil
+}
+
+// Manquants liste les agents activés pour lesquels le chemin n'existe pas.
+func (e Entry) Manquants() []string {
+	var out []string
+	for _, a := range e.Agents {
+		if !e.InstalledFor(a) {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// trouverManifeste cherche agents.yaml en remontant depuis le dossier courant,
+// puis dans les emplacements personnels. Un manifeste personnel évite d'avoir
+// à se trouver « dans un projet » pour lancer l'outil.
+func trouverManifeste(explicite string) string {
+	if explicite != "" {
+		return explicite
+	}
+	if v := os.Getenv("AGENTS_MANIFEST"); v != "" {
+		return v
+	}
+	if wd, err := os.Getwd(); err == nil {
+		dir := wd
+		for {
+			cand := filepath.Join(dir, "agents.yaml")
+			if _, err := os.Stat(cand); err == nil {
+				return cand
+			}
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+	if h, err := os.UserHomeDir(); err == nil {
+		for _, c := range []string{
+			filepath.Join(h, ".agents", "agents.yaml"),
+			filepath.Join(h, ".hermes", "agents.yaml"),
+		} {
+			if _, err := os.Stat(c); err == nil {
+				return c
+			}
+		}
+	}
+	return ""
 }
 
 func loadManifest(path string) (*Manifest, error) {
@@ -164,7 +240,7 @@ func (m model) View() string {
 	var b strings.Builder
 	b.WriteString(titre.Render("agents") + inactif.Render("  —  skills, MCP, plugins, réglages") + "\n")
 	b.WriteString(inactif.Render(fmt.Sprintf("%d entrées · %s", len(m.man.Entries), m.man.path)) + "\n\n")
-	b.WriteString(inactif.Render(fmt.Sprintf("  %-10s %-28s %-10s %s", "TYPE", "NOM", "ÉTAT", "INSTALLÉ")) + "\n")
+	b.WriteString(inactif.Render(fmt.Sprintf("  %-10s %-26s %-10s %-5s %s", "TYPE", "NOM", "ÉTAT", "INST", "AGENTS")) + "\n")
 
 	for i, e := range m.man.Entries {
 		inst := e.Installed()
@@ -176,8 +252,8 @@ func (m model) View() string {
 		if inst {
 			instTxt = "oui"
 		}
-		// activé mais absent de la machine : c'est le cas qui mérite un signal
-		ligne := fmt.Sprintf("  %-10s %-28s %-10s %s", e.Kind, tronque(e.Name, 28), etat, instTxt)
+		qui := strings.Join(e.Agents, ",")
+		ligne := fmt.Sprintf("  %-10s %-26s %-10s %-5s %s", e.Kind, tronque(e.Name, 26), etat, instTxt, tronque(qui, 22))
 		switch {
 		case i == m.cursor:
 			b.WriteString(sel.Render(ligne))
@@ -222,14 +298,42 @@ func tronque(s string, n int) string {
 // ---------------------------------------------------------------- main
 
 func main() {
-	manifestPath := "agents.yaml"
-	if v := os.Getenv("AGENTS_MANIFEST"); v != "" {
-		manifestPath = v
-	}
+	manifestPath := ""
 	for i, a := range os.Args[1:] {
 		if a == "--manifest" && i+2 <= len(os.Args)-1 {
 			manifestPath = os.Args[i+2]
 		}
+	}
+
+	for _, a := range os.Args[1:] {
+		if a == "--init" {
+			h, _ := os.UserHomeDir()
+			dest := filepath.Join(h, ".agents", "agents.yaml")
+			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+				fmt.Fprintf(os.Stderr, "agents : %v\n", err)
+				os.Exit(2)
+			}
+			if _, err := os.Stat(dest); err == nil {
+				fmt.Printf("agents : %s existe déjà, rien écrasé\n", dest)
+				return
+			}
+			if err := os.WriteFile(dest, exemple, 0o644); err != nil {
+				fmt.Fprintf(os.Stderr, "agents : %v\n", err)
+				os.Exit(2)
+			}
+			fmt.Printf("agents : manifeste créé dans %s\n", dest)
+			return
+		}
+	}
+
+	if manifestPath == "" {
+		manifestPath = trouverManifeste("")
+	}
+	if manifestPath == "" {
+		fmt.Fprintln(os.Stderr, "agents : aucun agents.yaml trouvé.")
+		fmt.Fprintln(os.Stderr, "Lance « agents --init » pour en créer un dans ~/.agents/,")
+		fmt.Fprintln(os.Stderr, "ou place-en un à la racine de ton projet.")
+		os.Exit(2)
 	}
 
 	m, err := loadManifest(manifestPath)
@@ -252,15 +356,18 @@ func main() {
 		case "--check":
 			manquant := 0
 			for _, e := range m.Entries {
-				if e.Enabled && !e.Installed() {
-					fmt.Printf("MANQUANT  %-10s %s (%s)\n", e.Kind, e.Name, e.Detect)
+				if !e.Enabled {
+					continue
+				}
+				for _, ag := range e.Manquants() {
+					fmt.Printf("MANQUANT  %-10s %-24s agent=%-10s %s\n", e.Kind, e.Name, ag, e.Targets[ag])
 					manquant++
 				}
 			}
 			if manquant > 0 {
 				os.Exit(1)
 			}
-			fmt.Println("tout ce qui est activé est présent")
+			fmt.Println("tout ce qui est activé est présent, pour tous les agents déclarés")
 			return
 		}
 	}

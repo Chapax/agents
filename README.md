@@ -18,10 +18,14 @@ Pas de `sudo`, aucune écriture ailleurs que dans `~/.local/bin`.
 ## Usage
 
 ```sh
+agents --init       # crée ~/.agents/agents.yaml à partir du modèle embarqué
 agents              # interface : naviguer, activer, désactiver
 agents --json       # état complet, pour les agents et les scripts
-agents --check      # code 1 si une entrée activée est absente de la machine
+agents --check      # code 1 si une entrée activée manque, agent par agent
 ```
+
+Le manifeste est cherché en remontant depuis le dossier courant, puis dans
+`~/.agents/agents.yaml`. Pas besoin d'être « dans un projet » pour lancer l'outil.
 
 Dans l'interface :
 
@@ -32,25 +36,45 @@ Dans l'interface :
 - `s` — enregistrer
 - `q` — quitter
 
-## Le manifeste
+## Le manifeste, multi-agents
 
-Tout tient dans `agents.yaml` :
+Une entrée décrit **une chose**, et dit **où elle doit vivre pour chaque agent** :
 
 ```yaml
-version: 1
-entries:
-  - id: superpowers
-    kind: skill          # skill | mcp | plugin | config
-    name: Superpowers
-    source: obra/superpowers
-    detect: ~/.hermes/skills/superpowers   # le chemin qui prouve l'installation
-    enabled: false
+- id: superpowers
+  kind: skill              # skill | mcp | plugin | config
+  name: Superpowers
+  source: obra/superpowers
+  enabled: true
+  agents: [hermes, claude, codex]
+  targets:
+    hermes: ~/.hermes/skills/superpowers
+    claude: ~/.claude/skills/superpowers
+    codex:  ~/.codex/skills/superpowers
 ```
 
-Le champ `detect` est le cœur du projet : il ne dit pas « je veux », il dit
-**« voici comment vérifier »**. Une entrée activée dont le chemin n'existe pas
-s'affiche en orange — c'est le décalage entre l'intention et la machine, celui
-qui casse silencieusement une configuration.
+`--check` ne répond pas « installé / pas installé », mais **pour quel agent** :
+
+```
+MANQUANT  skill  Superpowers  agent=codex  ~/.codex/skills/superpowers
+```
+
+C'est le décalage entre l'intention et la machine, celui qui casse
+silencieusement une configuration.
+
+### Emplacements connus
+
+| Agent | Config | Skills | MCP |
+|---|---|---|---|
+| Hermes | `~/.hermes/config.yaml` | `~/.hermes/skills` | `~/.hermes/config.yaml` |
+| Claude Code | `~/.claude/settings.json` | `~/.claude/skills` | `~/.claude.json` |
+| Codex | `~/.codex/config.toml` | `~/.codex/skills` | `~/.codex/config.toml` |
+| Gemini / Antigravity | `~/.gemini/settings.json` | — | `~/.gemini/config/mcp_config.json` |
+| opencode | `~/.config/opencode/opencode.json` | — | — |
+| Cursor | `~/.cursor/hooks.json` | — | — |
+
+Hermes garde ses profils séparés (`~/.hermes/profiles/<nom>/`), donc deux agents
+Hermes peuvent avoir deux configurations distinctes depuis le même manifeste.
 
 ## Ce que ce projet ne fait pas
 
