@@ -56,12 +56,7 @@ func ecranInstallationAnime(entrees []Entry, etapes []etape, courant, frame int)
 	texte = append(texte, etapeAttente.Render(fmt.Sprintf("%d entrées dans le manifeste · %d étapes", len(entrees), len(etapes))))
 	texte = append(texte, "")
 
-	m := mascotteAssis
-	if courant >= len(etapes) {
-		m = mascotteFini
-	} else if courant > 0 {
-		m = mascotteTravaille
-	}
+	m := mascotteSurLeDos
 	m = m.image(frame)
 
 	var droite []string

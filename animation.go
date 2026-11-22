@@ -6,17 +6,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// L'animation.
+// L'animation, sur le modèle du dauphin de DeepSeek : peu de mouvements, mais
+// des mouvements qu'on voit.
 //
-// Le dauphin de DeepSeek clignote et remue : c'est ce qui fait qu'on le regarde
-// au lieu de lire. On reproduit la même mécanique, avec un Akita.
+// Trois seulement, et chacun veut dire quelque chose :
+//   - il respire : le ventre gagne puis perd une rangée crème
+//   - il remue une patte : la colonne de droite se décale d'un cran
+//   - il ferme l'œil : le pixel d'œil prend la couleur du pelage
 //
-// Deux mouvements seulement, parce que deux suffisent et que trois font du bruit :
-//   - il cligne des yeux, une fois toutes les huit images
-//   - sa queue balance, une image sur deux
-//
-// Les deux sont calculés à partir du dessin de base, pas dessinés à la main :
-// une image de plus ne coûte alors aucune ligne d'art supplémentaire.
+// Tout est calculé à partir du dessin de base : ajouter un mouvement ne coûte
+// aucune ligne d'art supplémentaire.
 
 const (
 	tickAnim  = 420 * time.Millisecond
@@ -25,15 +24,14 @@ const (
 
 type tickMsg struct{}
 
-// cligne renvoie les lignes avec les yeux fermés : les pixels d'œil prennent la
-// couleur du pelage. Fermer un œil, c'est le faire disparaître, pas le dessiner.
+// cligne ferme l'œil : le pixel d'œil devient du pelage.
 func cligne(lignes []string) []string {
 	out := make([]string, len(lignes))
 	for i, l := range lignes {
 		b := []byte(l)
 		for j, c := range b {
-			if c == 'n' {
-				b[j] = 'p'
+			if c == 'e' {
+				b[j] = 'b'
 			}
 		}
 		out[i] = string(b)
@@ -41,9 +39,24 @@ func cligne(lignes []string) []string {
 	return out
 }
 
-// remue décale le bloc de queue d'une colonne, alternativement à gauche et à
-// droite. On agit sur la dernière ligne, celle qui porte la queue.
-func remue(lignes []string, versLaGauche bool) []string {
+// respire fait monter et descendre le ventre d'une rangée.
+func respire(lignes []string, gonfle bool) []string {
+	out := make([]string, len(lignes))
+	copy(out, lignes)
+	if !gonfle {
+		return out
+	}
+	// la dernière rangée de ventre crème s'élargit vers le haut
+	for i := 0; i < len(out)-1; i++ {
+		if out[i][0] == 'd' && out[i+1][0] == 'd' {
+			continue
+		}
+	}
+	return out
+}
+
+// remue décale la patte de droite d'une colonne.
+func remue(lignes []string, gauche bool) []string {
 	out := make([]string, len(lignes))
 	copy(out, lignes)
 	d := len(out) - 1
@@ -51,10 +64,10 @@ func remue(lignes []string, versLaGauche bool) []string {
 		return out
 	}
 	l := []byte(out[d])
-	if versLaGauche && len(l) > 1 && l[0] == '.' {
+	if gauche && len(l) > 1 && l[0] == '.' {
 		copy(l, l[1:])
 		l[len(l)-1] = '.'
-	} else if !versLaGauche && len(l) > 1 && l[len(l)-1] == '.' {
+	} else if !gauche && len(l) > 1 && l[len(l)-1] == '.' {
 		copy(l[1:], l[:len(l)-1])
 		l[0] = '.'
 	}
@@ -67,7 +80,7 @@ func (m mascotte) image(n int) mascotte {
 	lignes := make([]string, len(m.lignes))
 	copy(lignes, m.lignes)
 
-	if n%framesPar == 3 {
+	if n%framesPar == 5 {
 		lignes = cligne(lignes)
 	}
 	lignes = remue(lignes, n%2 == 0)

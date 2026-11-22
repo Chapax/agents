@@ -2,86 +2,71 @@ package main
 
 import "github.com/charmbracelet/lipgloss"
 
-// L'Akita de l'installateur.
+// L'Akita de l'installateur, d'après les photos de Chapax.
 //
-// Dessiné en blocs pleins, trois teintes : le pelage fauve, le poitrail blanc,
-// et l'œil. Il occupe 11 colonnes sur 9 lignes : assez grand pour qu'on
-// reconnaisse la race, assez petit pour tenir à côté du texte sur 80 colonnes.
+// Ce qui le fait reconnaître, dans l'ordre d'importance :
+//   1. il est BRINGÉ — des rayures sombres sur un brun chaud, pas un beige uni
+//   2. il est SUR LE DOS — ventre crème offert, quatre pattes en l'air
+//   3. museau crème, truffe noire, poil long sur le poitrail
 //
-// Trois états, comme le dauphin : il attend, il travaille, il a fini.
-// L'oreille pointue et la queue enroulée sont ce qui fait lire « akita » et pas
-// « chien » — ce sont les deux traits à ne jamais simplifier.
+// Légende du dessin :
+//   b = brun de base        d = rayure bringée (sombre)
+//   c = crème (ventre, pattes, museau)   n = truffe   e = œil   . = vide
+//
+// La pose sur le dos n'est pas décorative : un chien qui s'offre le ventre ne
+// monte pas la garde. C'est le bon signal pour un installateur qui travaille
+// pendant qu'on le regarde.
 
 var (
-	poil   = lipgloss.NewStyle().Foreground(lipgloss.Color("180")) // fauve
-	clair  = lipgloss.NewStyle().Foreground(lipgloss.Color("255")) // poitrail
-	sombre = lipgloss.NewStyle().Foreground(lipgloss.Color("236")) // œil, truffe
-	assise = lipgloss.NewStyle().Foreground(lipgloss.Color("94"))  // ombre au sol
+	brun   = lipgloss.NewStyle().Foreground(lipgloss.Color("137")) // brun chaud
+	rayure = lipgloss.NewStyle().Foreground(lipgloss.Color("238")) // bringé sombre
+	creme  = lipgloss.NewStyle().Foreground(lipgloss.Color("223")) // ventre, museau
+	noir   = lipgloss.NewStyle().Foreground(lipgloss.Color("232")) // truffe
+	oeil   = lipgloss.NewStyle().Foreground(lipgloss.Color("94"))  // œil ambre
 )
 
 type mascotte struct {
 	nom    string
-	lignes []string // chaque caractère : p = poil, b = blanc, n = noir, . = vide
+	lignes []string
 }
 
-var mascotteAssis = mascotte{
-	nom: "assis",
+// Sur le dos, tête à droite, quatre pattes en l'air, ventre crème au centre.
+var mascotteSurLeDos = mascotte{
+	nom: "sur le dos",
 	lignes: []string{
-		`..p......p..`,
-		`.ppp....ppp.`,
-		`.pppppppppp.`,
-		`pp.pppppp.pp`,
-		`pppnnppnnppp`,
-		`pppppbbppppp`,
-		`.pppbbbbppp.`,
-		`..ppbbbbpp..`,
-		`...ppbbpp...`,
+		`.....cc...........cc....`,
+		`..cc.cc.....cc....cc.cc.`,
+		`..cc.cc.....cc....cc.cc.`,
+		`.ddccddccddddccddddccdd.`,
+		`ddbbbbbbbbbbbbbbbbbbbbdd`,
+		`dbbddddddddddddddddddbbd`,
+		`dbbccccccccccccccccccbne`,
+		`dbbccccccccccccccccccbnn`,
+		`dbbddddddddddddddddddbbd`,
+		`.ddbbbbbbbbbbbbbbbbbbdd.`,
+		`...dd..dd.......dd..dd..`,
 	},
 }
 
-var mascotteTravaille = mascotte{
-	nom: "travaille",
-	lignes: []string{
-		`..p......p..`,
-		`.ppp....ppp.`,
-		`.pppppppppp.`,
-		`pp.pppppp.pp`,
-		`pppnnppnnppp`,
-		`pppppbbppppp`,
-		`.pppbbbbppp.`,
-		`..ppbbbbpp..`,
-		`..pp.bb.pp..`,
-	},
-}
-
-var mascotteFini = mascotte{
-	nom: "fini",
-	lignes: []string{
-		`..p......p..`,
-		`.ppp....ppp.`,
-		`.pppppppppp.`,
-		`pp.pppppp.pp`,
-		`pppnnppnnppp`,
-		`pppppbbppppp`,
-		`.pppbbbbppp.`,
-		`..ppbbbbpp..`,
-		`.ppppbbpppp.`,
-	},
-}
+var mascotteFini = mascotte{nom: "fini", lignes: mascotteSurLeDos.lignes}
 
 // dessine rend la mascotte coloriée, une ligne par entrée.
 func (m mascotte) dessine() []string {
 	out := make([]string, 0, len(m.lignes))
 	for _, l := range m.lignes {
 		var s string
-		for _, c := range l {
-			switch c {
-			case 'p':
-				s += poil.Render("█")
+		for _, ch := range l {
+			switch ch {
 			case 'b':
-				s += clair.Render("█")
+				s += brun.Render("█")
+			case 'd':
+				s += rayure.Render("█")
+			case 'c':
+				s += creme.Render("█")
 			case 'n':
-				s += sombre.Render("█")
+				s += noir.Render("█")
+			case 'e':
+				s += oeil.Render("█")
 			default:
 				s += " "
 			}
@@ -101,12 +86,11 @@ func cote(m mascotte, texte []string) string {
 	}
 	lignes := make([]string, n)
 	for i := 0; i < n; i++ {
-		var g, d string
+		g := "                        "
 		if i < len(art) {
 			g = art[i]
-		} else {
-			g = "           "
 		}
+		var d string
 		if i < len(texte) {
 			d = texte[i]
 		}
