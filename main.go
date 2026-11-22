@@ -345,6 +345,26 @@ func main() {
 	sort.SliceStable(m.Entries, func(i, j int) bool { return m.Entries[i].Kind < m.Entries[j].Kind })
 
 	for _, a := range os.Args[1:] {
+		if a == "--demo" {
+			fmt.Print(rendreDemo())
+			return
+		}
+		if a == "install" {
+			// sans terminal interactif, on montre l'écran tel qu'il sera
+			if !isTTY() {
+				fmt.Print(rendreDemo())
+				return
+			}
+			p := tea.NewProgram(newModel(m), tea.WithAltScreen(), tea.WithMouseCellMotion())
+			if _, err := p.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "agents : %v\n", err)
+				os.Exit(1)
+			}
+			return
+		}
+	}
+
+	for _, a := range os.Args[1:] {
 		switch a {
 		case "--json":
 			out, _ := json.MarshalIndent(map[string]any{
