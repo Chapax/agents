@@ -45,6 +45,11 @@ func marque(etat string) string {
 // ecranInstallation compose l'écran. pur : aucun effet de bord, ce qui permet
 // de le rendre à l'identique dans un test ou une capture.
 func ecranInstallation(entrees []Entry, etapes []etape, courant int) string {
+	return ecranInstallationAnime(entrees, etapes, courant, 0)
+}
+
+// ecranInstallationAnime est la même chose, avec l'image n de l'Akita.
+func ecranInstallationAnime(entrees []Entry, etapes []etape, courant, frame int) string {
 	var texte []string
 	texte = append(texte, titreInstall.Render("Bonjour.")+"  "+etapeAttente.Render("je suis ton Akita d'installation."))
 	texte = append(texte, "")
@@ -57,6 +62,7 @@ func ecranInstallation(entrees []Entry, etapes []etape, courant int) string {
 	} else if courant > 0 {
 		m = mascotteTravaille
 	}
+	m = m.image(frame)
 
 	var droite []string
 	for i, e := range etapes {
@@ -70,7 +76,7 @@ func ecranInstallation(entrees []Entry, etapes []etape, courant int) string {
 		}
 	}
 
-	corps := cote(m, droite)
+	corps := strings.Join(texte, "\n") + "\n\n" + cote(m, droite)
 	bas := etapeAttente.Render("entrée : continuer · échap : tout arrêter, rien n'est modifié")
 	return encadre.Render(corps) + "\n\n" + bas
 }

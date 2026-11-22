@@ -355,7 +355,7 @@ func main() {
 				fmt.Print(rendreDemo())
 				return
 			}
-			p := tea.NewProgram(newModel(m), tea.WithAltScreen(), tea.WithMouseCellMotion())
+			p := tea.NewProgram(newInstallModel(m), tea.WithAltScreen(), tea.WithMouseCellMotion())
 			if _, err := p.Run(); err != nil {
 				fmt.Fprintf(os.Stderr, "agents : %v\n", err)
 				os.Exit(1)
