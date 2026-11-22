@@ -151,3 +151,28 @@ entries:
       hermes: /etc/systemd/system/ollama.service.d/30-perf.conf
       opencode: ~/.config/opencode/opencode.json
     note: réglages mesurés sur la RTX 3070
+
+# ============================================================ profils
+# Sélectionnables et CUMULABLES : `agents --profile gamedev --profile backend`
+# active l'union des deux. Un profil ne remplace pas le manifeste, il le filtre.
+profils:
+  gamedev:
+    nom: "Jeu vidéo"
+    description: "rendu, shaders, assets, équilibrage"
+    entrees: [gamedev, repo-scout, superpowers]
+  backend:
+    nom: "Backend"
+    description: "API, bases, migrations, tests"
+    entrees: [superpowers, mattpocock, openviking]
+  frontend:
+    nom: "Frontend"
+    description: "interface, accessibilité, design system"
+    entrees: [superpowers, repo-scout]
+  devops:
+    nom: "Infra"
+    description: "serveurs, déploiement, secrets"
+    entrees: [vault-guard, openviking]
+  audit:
+    nom: "Audit"
+    description: "sécurité, dépendances, dette"
+    entrees: [superpowers, vault-guard, repo-scout]

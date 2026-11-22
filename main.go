@@ -42,10 +42,40 @@ type Entry struct {
 	Note    string            `yaml:"note,omitempty" json:"note,omitempty"`
 }
 
+type Profil struct {
+	Nom         string   `yaml:"nom" json:"nom"`
+	Description string   `yaml:"description" json:"description"`
+	Entrees     []string `yaml:"entrees" json:"entrees"`
+}
+
 type Manifest struct {
-	Version int     `yaml:"version" json:"version"`
-	Entries []Entry `yaml:"entries" json:"entries"`
+	Version int               `yaml:"version" json:"version"`
+	Entries []Entry           `yaml:"entries" json:"entries"`
+	Profils map[string]Profil `yaml:"profils" json:"profils"`
 	path    string
+}
+
+// restreint renvoie les entrées retenues par l'union des profils demandés.
+// Un profil ne remplace pas le manifeste : il le filtre.
+func (m *Manifest) restreint(noms []string) []Entry {
+	if len(noms) == 0 {
+		return m.Entries
+	}
+	garde := map[string]bool{}
+	for _, n := range noms {
+		if pr, ok := m.Profils[n]; ok {
+			for _, id := range pr.Entrees {
+				garde[id] = true
+			}
+		}
+	}
+	var out []Entry
+	for _, e := range m.Entries {
+		if garde[e.ID] {
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 func expand(p string) string {
@@ -343,6 +373,34 @@ func main() {
 	}
 
 	sort.SliceStable(m.Entries, func(i, j int) bool { return m.Entries[i].Kind < m.Entries[j].Kind })
+
+	var profilsDemandes []string
+	for i, a := range os.Args[1:] {
+		if a == "--profile" && i+2 <= len(os.Args)-1 {
+			profilsDemandes = append(profilsDemandes, os.Args[i+2])
+		}
+	}
+	if len(profilsDemandes) > 0 {
+		vues := m.restreint(profilsDemandes)
+		for _, a := range os.Args[1:] {
+			if a == "--json" {
+				out, _ := json.MarshalIndent(map[string]any{
+					"manifest": m.path, "profils": profilsDemandes, "entries": vues,
+				}, "", "  ")
+				fmt.Println(string(out))
+				return
+			}
+		}
+		fmt.Printf("profil(s) %s — %d entrées\n\n", strings.Join(profilsDemandes, " + "), len(vues))
+		for _, e := range vues {
+			etat := "désactivé"
+			if e.Enabled {
+				etat = "activé"
+			}
+			fmt.Printf("  %-9s %-26s %-10s %s\n", e.Kind, e.Name, etat, strings.Join(e.Agents, ","))
+		}
+		return
+	}
 
 	for _, a := range os.Args[1:] {
 		if a == "--demo" {
