@@ -30,9 +30,12 @@ jobs:
       - name: vet
         run: go vet ./...
 
+      # `--check` sort en 1 sur une machine neuve : c'est son rôle, il compare
+      # l'intention à la présence réelle. On ne l'exécute donc pas ici, sinon la
+      # CI échoue pour une raison qui n'a rien à voir avec le code.
       - name: le binaire répond
         run: |
           cd /tmp
           ./agents --init >/dev/null
-          ./agents --check
-          ./agents --json | head -5
+          ./agents --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['entries'], 'manifeste vide'"
+          ./agents --profile gamedev | head -3
