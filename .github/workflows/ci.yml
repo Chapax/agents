@@ -1,0 +1,38 @@
+name: ci
+
+# Vérifie ce qui doit l'être, et rien de plus : que le binaire se construit
+# et que les tests passent. Pas de badge décoratif sur des choses qu'on ne
+# vérifie pas.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+
+      - name: compilation
+        run: go build -o /tmp/agents .
+
+      - name: tests
+        run: go test ./...
+
+      - name: vet
+        run: go vet ./...
+
+      - name: le binaire répond
+        run: |
+          cd /tmp
+          ./agents --init >/dev/null
+          ./agents --check
+          ./agents --json | head -5
