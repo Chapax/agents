@@ -51,7 +51,10 @@ func TestPaletteBringee(t *testing.T) {
 // L'écran se compose sans paniquer, même sans manifeste.
 func TestEcranSansManifeste(t *testing.T) {
 	out := ecranInstallationAnime(nil, etapesParDefaut(), 2, 1)
-	if !strings.Contains(out, "Akita") {
-		t.Fatal("l'écran ne mentionne pas la mascotte")
+	if !strings.Contains(out, "agents") {
+		t.Fatal("l'écran ne mentionne pas le titre")
+	}
+	if !strings.Contains(out, "manifeste") {
+		t.Fatal("l'écran ne mentionne pas le manifeste")
 	}
 }

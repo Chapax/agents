@@ -51,7 +51,9 @@ func ecranInstallation(entrees []Entry, etapes []etape, courant int) string {
 // ecranInstallationAnime est la même chose, avec l'image n de l'Akita.
 func ecranInstallationAnime(entrees []Entry, etapes []etape, courant, frame int) string {
 	var texte []string
-	texte = append(texte, titreInstall.Render("Bonjour.")+"  "+etapeAttente.Render("je suis ton Akita d'installation."))
+	texte = append(texte, entete(frame))
+	texte = append(texte, "")
+	texte = append(texte, etapeAttente.Render(slogan()))
 	texte = append(texte, "")
 	texte = append(texte, etapeAttente.Render(fmt.Sprintf("%d entrées dans le manifeste · %d étapes", len(entrees), len(etapes))))
 	texte = append(texte, "")
