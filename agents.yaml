@@ -1,0 +1,94 @@
+# Manifeste des skills, serveurs MCP, plugins et réglages.
+# Un seul endroit. Chaque entrée dit où elle vit et comment savoir si elle est
+# réellement installée sur cette machine.
+#
+# kind   : skill | mcp | plugin | config
+# detect : le chemin à tester. « ~ » est accepté.
+# enabled: ce que tu veux. `agents --check` signale les activés absents.
+
+version: 1
+
+entries:
+  # ------------------------------------------------------------ skills
+  - id: superpowers
+    kind: skill
+    name: Superpowers
+    source: obra/superpowers
+    detect: ~/.hermes/skills/superpowers
+    enabled: false
+    note: discipline TDD et revue de code ; 324k étoiles, sans licence
+
+  - id: mattpocock
+    kind: skill
+    name: Matt Pocock skills
+    source: mattpocock/skills
+    detect: ~/.hermes/skills/mattpocock
+    enabled: false
+    note: grill-me, to-spec, to-tickets, tdd ; 330k étoiles, sans licence
+
+  - id: gamedev
+    kind: skill
+    name: Game dev router
+    source: gamedev-skills/awesome-gamedev-agent-skills
+    detect: ~/.hermes/skills/gamedev
+    enabled: false
+    note: routeur qui ne charge que la branche du moteur détecté
+
+  - id: repo-scout
+    kind: skill
+    name: github-repo-scout
+    source: local
+    detect: ~/.hermes/skills/research/github-repo-scout
+    enabled: true
+    note: choisir et juger un dépôt GitHub avec des chiffres mesurés
+
+  # ------------------------------------------------------------ MCP
+  - id: openviking
+    kind: mcp
+    name: OpenViking
+    source: http://127.0.0.1:1933/mcp
+    detect: ~/.hermes/config.yaml
+    enabled: true
+    note: accès sémantique au coffre
+
+  - id: context7
+    kind: mcp
+    name: Context7
+    source: https://mcp.context7.com/mcp
+    detect: ~/.hermes/config.yaml
+    enabled: false
+    note: documentation de bibliothèques à jour
+
+  - id: chrome-devtools
+    kind: mcp
+    name: Chrome DevTools
+    source: npx chrome-devtools-mcp
+    detect: ~/.hermes/config.yaml
+    enabled: false
+    note: inspection du navigateur, utile pour les tests d'interface
+
+  # ------------------------------------------------------------ plugins
+  - id: vault-guard
+    kind: plugin
+    name: vault-guard
+    source: local
+    detect: ~/.hermes/plugins/vault-guard
+    enabled: true
+    note: bloque l'écriture dans les zones immuables du coffre
+
+  # ------------------------------------------------------------ config
+  - id: opencode-go
+    kind: config
+    name: opencode-go / qwen4-max
+    source: https://opencode.ai/zen/go/v1
+    detect: ~/.hermes/.env
+    enabled: true
+    note: fournisseur principal, 10 $ par mois
+
+  - id: ollama-perf
+    kind: config
+    name: Ollama 8192 + q8_0
+    source: systemd
+    detect: /etc/systemd/system/ollama.service.d/30-perf.conf
+    enabled: false
+    note: réglages mesurés sur la RTX 3070
